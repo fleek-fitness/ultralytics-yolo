@@ -13,8 +13,7 @@ abstract class Predictor {
   final ultralyticsYoloPlatform = UltralyticsYoloPlatform.instance;
 
   /// The stream of the inference time.
-  Stream<double>? get inferenceTime =>
-      ultralyticsYoloPlatform.inferenceTimeStream;
+  Stream<double>? get inferenceTime => ultralyticsYoloPlatform.inferenceTimeStream;
 
   /// The stream of the frames per second (FPS) rate.
   Stream<double>? get fpsRate => ultralyticsYoloPlatform.fpsRateStream;

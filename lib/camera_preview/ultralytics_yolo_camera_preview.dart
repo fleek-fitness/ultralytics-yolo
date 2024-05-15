@@ -41,12 +41,10 @@ class UltralyticsYoloCameraPreview extends StatefulWidget {
   final Widget? loadingPlaceholder;
 
   @override
-  State<UltralyticsYoloCameraPreview> createState() =>
-      _UltralyticsYoloCameraPreviewState();
+  State<UltralyticsYoloCameraPreview> createState() => _UltralyticsYoloCameraPreviewState();
 }
 
-class _UltralyticsYoloCameraPreviewState
-    extends State<UltralyticsYoloCameraPreview> {
+class _UltralyticsYoloCameraPreviewState extends State<UltralyticsYoloCameraPreview> {
   final _ultralyticsYoloPlatform = UltralyticsYoloPlatform.instance;
 
   double _currentZoomFactor = 1;
@@ -107,8 +105,7 @@ class _UltralyticsYoloCameraPreviewState
               switch (widget.predictor.runtimeType) {
                 case ObjectDetector:
                   return StreamBuilder(
-                    stream: (widget.predictor! as ObjectDetector)
-                        .detectionResultStream,
+                    stream: (widget.predictor! as ObjectDetector).detectionResultStream,
                     builder: (
                       BuildContext context,
                       AsyncSnapshot<List<DetectedObject?>?> snapshot,
@@ -127,13 +124,11 @@ class _UltralyticsYoloCameraPreviewState
                 case ImageClassifier:
                   return widget.classificationOverlay ??
                       StreamBuilder(
-                        stream: (widget.predictor! as ImageClassifier)
-                            .classificationResultStream,
+                        stream: (widget.predictor! as ImageClassifier).classificationResultStream,
                         builder: (context, snapshot) {
                           final classificationResults = snapshot.data;
 
-                          if (classificationResults == null ||
-                              classificationResults.isEmpty) {
+                          if (classificationResults == null || classificationResults.isEmpty) {
                             return Container();
                           }
 
@@ -157,18 +152,15 @@ class _UltralyticsYoloCameraPreviewState
                   // Adjust the sensitivity for zoom out
                   if (newZoomFactor < _currentZoomFactor) {
                     newZoomFactor = _currentZoomFactor -
-                        (_zoomSensitivity *
-                            (_currentZoomFactor - newZoomFactor));
+                        (_zoomSensitivity * (_currentZoomFactor - newZoomFactor));
                   } else {
                     newZoomFactor = _currentZoomFactor +
-                        (_zoomSensitivity *
-                            (newZoomFactor - _currentZoomFactor));
+                        (_zoomSensitivity * (newZoomFactor - _currentZoomFactor));
                   }
 
                   // Limit the zoom factor to a range between
                   // _minZoomLevel and _maxZoomLevel
-                  final clampedZoomFactor =
-                      max(_minZoomLevel, min(_maxZoomLevel, newZoomFactor));
+                  final clampedZoomFactor = max(_minZoomLevel, min(_maxZoomLevel, newZoomFactor));
 
                   // Update the zoom factor
                   _ultralyticsYoloPlatform.setZoomRatio(clampedZoomFactor);

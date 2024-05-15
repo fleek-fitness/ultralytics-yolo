@@ -28,8 +28,7 @@ class UltralyticsYoloCameraValue {
 }
 
 /// ValueNotifier that holds the state of the camera
-class UltralyticsYoloCameraController
-    extends ValueNotifier<UltralyticsYoloCameraValue> {
+class UltralyticsYoloCameraController extends ValueNotifier<UltralyticsYoloCameraValue> {
   /// Constructor to create an instance of [UltralyticsYoloCameraController]
   UltralyticsYoloCameraController()
       : super(

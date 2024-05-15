@@ -33,12 +33,9 @@ class ObjectDetectorPainter extends CustomPainter {
       final width = detectedObject.boundingBox.width;
       final height = detectedObject.boundingBox.height;
 
-      if (left.isNaN ||
-          top.isNaN ||
-          right.isNaN ||
-          bottom.isNaN ||
-          width.isNaN ||
-          height.isNaN) return;
+      if (left.isNaN || top.isNaN || right.isNaN || bottom.isNaN || width.isNaN || height.isNaN) {
+        return;
+      }
 
       final opacity = (detectedObject.confidence - 0.2) / (1.0 - 0.2) * 0.9;
 
