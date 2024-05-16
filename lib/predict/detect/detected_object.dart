@@ -8,6 +8,8 @@ class DetectedObject {
     required this.boundingBox,
     required this.index,
     required this.label,
+    this.detectedAt,
+    this.isValid = false,
   });
 
   /// Creates a [DetectedObject] from a [json] object.
@@ -22,6 +24,22 @@ class DetectedObject {
       ),
       index: json['index'] as int,
       label: json['label'] as String,
+      detectedAt: DateTime.now(),
+      isValid: false,
+    );
+  }
+
+  DetectedObject copyWith({
+    DateTime? detectedAt,
+    bool? isValid,
+  }) {
+    return new DetectedObject(
+      confidence: confidence,
+      boundingBox: boundingBox,
+      index: index,
+      label: label,
+      detectedAt: detectedAt ?? this.detectedAt,
+      isValid: isValid ?? this.isValid,
     );
   }
 
@@ -36,4 +54,10 @@ class DetectedObject {
 
   /// The label of the detection.
   final String label;
+
+  /// The time the object was detected.
+  DateTime? detectedAt;
+
+  /// Whether the object is valid.
+  bool isValid;
 }
