@@ -60,4 +60,7 @@ class DetectedObject {
 
   /// Whether the object is valid.
   bool isValid;
+
+  /// The area of the bounding box.
+  double get area => boundingBox.width * boundingBox.height;
 }
