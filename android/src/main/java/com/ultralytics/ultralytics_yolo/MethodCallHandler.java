@@ -1,3 +1,5 @@
+// MethodCallHandler.java
+
 package com.ultralytics.ultralytics_yolo;
 
 import static com.ultralytics.ultralytics_yolo.CameraPreview.CAMERA_PREVIEW_SIZE;
@@ -5,9 +7,13 @@ import static com.ultralytics.ultralytics_yolo.CameraPreview.CAMERA_PREVIEW_SIZE
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Environment;
+import android.util.Base64;
 import android.util.DisplayMetrics;
 
 import androidx.annotation.NonNull;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.ImageCaptureException;
 
 import com.ultralytics.ultralytics_yolo.models.LocalYoloModel;
 import com.ultralytics.ultralytics_yolo.models.RemoteYoloModel;
@@ -19,6 +25,10 @@ import com.ultralytics.ultralytics_yolo.predict.classify.TfliteClassifier;
 import com.ultralytics.ultralytics_yolo.predict.detect.Detector;
 import com.ultralytics.ultralytics_yolo.predict.detect.TfliteDetector;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException; 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -108,6 +118,9 @@ public class MethodCallHandler implements MethodChannel.MethodCallHandler {
                 break;
             case "setZoomRatio":
                 setScaleFactor(call, result);
+                break;
+            case "captureOutput":
+                captureOutput(call, result);
                 break;
             default:
                 result.notImplemented();
@@ -347,4 +360,71 @@ public class MethodCallHandler implements MethodChannel.MethodCallHandler {
             cameraPreview.setScaleFactor(factor);
         }
     }
+
+    private void captureOutput(MethodCall call, MethodChannel.Result result) {
+        cameraPreview.takePhoto(new ImageCapture.OnImageSavedCallback() {
+            @Override
+            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                String imagePath = cameraPreview.getCapturedImagePath();
+                if (imagePath != null) {
+                    Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+                    final float[][] res = (float[][]) predictor.predict(bitmap);
+
+                    List<Map<String, Object>> objects = new ArrayList<>();
+                    for (float[] obj : res) {
+                        Map<String, Object> objectMap = new HashMap<>();
+                        
+                        float imageWidth = bitmap.getWidth();
+                        float imageHeight = bitmap.getHeight();
+                        float x = obj[0] * imageWidth;
+                        float y = obj[1] * imageHeight;
+                        float width = obj[2] * imageWidth;
+                        float height = obj[3] * imageHeight;
+                        float confidence = obj[4];
+                        int index = (int) obj[5];
+                        String label = index < predictor.labels.size() ? predictor.labels.get(index) : "";
+
+                        objectMap.put("x", x);
+                        objectMap.put("y", y);
+                        objectMap.put("width", width);
+                        objectMap.put("height", height);
+                        objectMap.put("confidence", confidence);
+                        objectMap.put("index", index);
+                        objectMap.put("label", label);
+
+                        // Crop the image based on the bounding box
+                        Bitmap croppedBitmap = Bitmap.createBitmap(bitmap, (int) x, (int) y, (int) width, (int) height);
+
+                        // Save the cropped image
+                        String croppedImagePath = saveCroppedImage(croppedBitmap);
+                        objectMap.put("croppedImagePath", croppedImagePath);
+                        objectMap.put("originalImagePath", imagePath);
+
+                        objects.add(objectMap);
+                    }
+                    System.out.println(objects);
+                    result.success(objects);
+                } else {
+                    result.error("CaptureError", "Failed to capture image", null);
+                }
+            }
+
+            @Override
+            public void onError(@NonNull ImageCaptureException exception) {
+                result.error("CaptureError", "Failed to capture image", exception);
+            }
+        });
+    }
+
+    private String saveCroppedImage(Bitmap bitmap) {
+        File croppedImageFile = new File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), System.currentTimeMillis() + "_cropped.jpg");
+        try (FileOutputStream out = new FileOutputStream(croppedImageFile)) {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return croppedImageFile.getAbsolutePath();
+    }
 }
+

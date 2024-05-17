@@ -10,6 +10,8 @@ class DetectedObject {
     required this.label,
     this.detectedAt,
     this.isValid = false,
+    this.base64Encoded,
+    this.croppedImagePath,
   });
 
   /// Creates a [DetectedObject] from a [json] object.
@@ -25,15 +27,17 @@ class DetectedObject {
       index: json['index'] as int,
       label: json['label'] as String,
       detectedAt: DateTime.now(),
-      isValid: false,
+      base64Encoded: json['base64Encoded'] as String?,
+      croppedImagePath: json['croppedImagePath'] as String?,
     );
   }
 
+  /// Copy the [DetectedObject] with the given parameters.
   DetectedObject copyWith({
     DateTime? detectedAt,
     bool? isValid,
   }) {
-    return new DetectedObject(
+    return DetectedObject(
       confidence: confidence,
       boundingBox: boundingBox,
       index: index,
@@ -60,6 +64,12 @@ class DetectedObject {
 
   /// Whether the object is valid.
   bool isValid;
+
+  /// The base64 encoded image.
+  final String? base64Encoded;
+
+  /// The path of the cropped image.
+  final String? croppedImagePath;
 
   /// The area of the bounding box.
   double get area => boundingBox.width * boundingBox.height;
