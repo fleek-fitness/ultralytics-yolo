@@ -50,6 +50,10 @@ public class CameraPreview {
         this.context = context;
     }
 
+    public PreviewView getPreviewView() {
+        return mPreviewView;
+    }
+
     public void openCamera(int facing, Activity activity, PreviewView mPreviewView) {
         this.activity = activity;
         this.mPreviewView = mPreviewView;

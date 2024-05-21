@@ -14,6 +14,8 @@ import android.util.DisplayMetrics;
 import androidx.annotation.NonNull;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
+import androidx.camera.view.PreviewView;
+import org.json.JSONObject;
 
 import com.ultralytics.ultralytics_yolo.models.LocalYoloModel;
 import com.ultralytics.ultralytics_yolo.models.RemoteYoloModel;
@@ -122,6 +124,9 @@ public class MethodCallHandler implements MethodChannel.MethodCallHandler {
             case "captureOutput":
                 captureOutput(call, result);
                 break;
+           case "takeSnapshot":
+               takeSnapshot(call, result);
+               break;
             default:
                 result.notImplemented();
                 break;
@@ -415,6 +420,40 @@ public class MethodCallHandler implements MethodChannel.MethodCallHandler {
             }
         });
     }
+
+//
+   private void takeSnapshot(MethodCall call, MethodChannel.Result result) {
+        PreviewView previewView = this.cameraPreview.getPreviewView();
+       
+        Bitmap bitmap =  previewView.getBitmap();
+        String base64String = bitmapToBase64String(bitmap);
+
+        Map<String, Object> objects = new HashMap<>();
+        objects.put("width", bitmap.getWidth());
+        objects.put("height", bitmap.getHeight());
+        objects.put("base64String", base64String);
+
+
+        try {
+            // Map 객체를 JSONObject로 변환
+            JSONObject jsonObject = new JSONObject(objects);
+            String jsonString = jsonObject.toString();
+
+            result.success(jsonString);
+        } catch (Exception e) {
+            result.error("JSONError", "Failed to convert map to JSON string", e);
+        }
+   }
+
+   private String bitmapToBase64String(Bitmap bitmap) {
+       ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+       bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream); // Compression set to 50%
+       byte[] byteArray = outputStream.toByteArray();
+       return Base64.encodeToString(byteArray, Base64.DEFAULT);
+   }
+
+
+
 
     private String saveCroppedImage(Bitmap bitmap) {
         File croppedImageFile = new File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), System.currentTimeMillis() + "_cropped.jpg");
