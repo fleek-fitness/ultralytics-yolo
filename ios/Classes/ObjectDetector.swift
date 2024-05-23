@@ -350,13 +350,13 @@ public class ObjectDetector: Predictor {
 
             // Add recognition results including the cropped image data
             recognitions.append([
-              "label": label,
-              "confidence": confidence,
-              "index": index,
               "x": boundingBox.origin.x,
               "y": boundingBox.origin.y,
               "width": boundingBox.size.width,
               "height": boundingBox.size.height,
+              "confidence": confidence,
+              "index": index,
+              "label": label,
               "base64Encoded": imageData.base64EncodedString(),
             ])
 
