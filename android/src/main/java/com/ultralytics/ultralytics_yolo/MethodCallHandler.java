@@ -431,7 +431,7 @@ public class MethodCallHandler implements MethodChannel.MethodCallHandler {
         Map<String, Object> objects = new HashMap<>();
         objects.put("width", bitmap.getWidth());
         objects.put("height", bitmap.getHeight());
-        objects.put("base64String", base64String);
+        objects.put("base64Encoded", base64String);
 
 
         try {

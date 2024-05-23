@@ -169,23 +169,43 @@ class MethodCallHandler: VideoCaptureDelegate, InferenceTimeListener, ResultsLis
     }
     
     private func captureOutput(args: [String: Any], result: @escaping FlutterResult) {
-        videoCapture.capture { [weak self] image in
-            guard let self = self else {
-                result(FlutterError(code: "CAPTURE_ERROR", message: "Self is nil", details: nil))
-                return
-            }
-            
-            if let image = image {
-                self.predictor?.predictOnImage(
-                    image: image,
-                    completion: { recognitions in
-                        result(recognitions)
-                    })
-            } else {
-                result(
-                    FlutterError(code: "CAPTURE_ERROR", message: "Failed to capture photo", details: nil))
-            }
+        // 화면 데이터를 그대로 사용하는 방식
+        guard let sampleBuffer = videoCapture.sampleBuffer else {
+            return
         }
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+            return
+        }
+        
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        let image = CIImage(cvPixelBuffer: pixelBuffer)
+        self.predictor?.predictOnImage(
+            image: image,
+            completion: { recognitions in
+                result(recognitions)
+            })
+
+        
+        
+        
+        // 기존에 캡쳐를 하는 방식
+//        videoCapture.capture { [weak self] image in // image는 CIImage 입니다
+//            guard let self = self else {
+//                result(FlutterError(code: "CAPTURE_ERROR", message: "Self is nil", details: nil))
+//                return
+//            }
+//            
+//            if let image = image {
+//                self.predictor?.predictOnImage(
+//                    image: image,
+//                    completion: { recognitions in
+//                        result(recognitions)
+//                    })
+//            } else {
+//                result(
+//                    FlutterError(code: "CAPTURE_ERROR", message: "Failed to capture photo", details: nil))
+//            }
+//        }
     }
     
     private func takeSnapshot(args: [String: Any], result: @escaping FlutterResult) {
@@ -223,12 +243,15 @@ class MethodCallHandler: VideoCaptureDelegate, InferenceTimeListener, ResultsLis
         let base64String = imageData.base64EncodedString()
         
         
-        let metaData = ["width": width, "height": height, "bytesPerRow": bytesPerRow, "base64String": base64String] as [String : Any]
+        let metaData = [
+            "base64Encoded": base64String,
+            "width": width,
+            "height": height,
+        ] as [String : Any]
         
         if let jsonData = try? JSONSerialization.data(withJSONObject: metaData, options: []),
             let jsonString = String(data: jsonData, encoding: .utf8) {
-             let frameData = jsonString
-            result(frameData)
+            result(jsonString)
          }
     }
     func on(predictions: [[String: Any]]) {
