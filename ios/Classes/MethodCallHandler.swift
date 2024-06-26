@@ -169,43 +169,26 @@ class MethodCallHandler: VideoCaptureDelegate, InferenceTimeListener, ResultsLis
     }
     
     private func captureOutput(args: [String: Any], result: @escaping FlutterResult) {
-        // 화면 데이터를 그대로 사용하는 방식
-        guard let sampleBuffer = videoCapture.sampleBuffer else {
+        guard let (pixelBuffer, ciImage, uiImage, base64String, width, height) = getPixelBufferAndCIImage() else {
             return
         }
-        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
-            return
-        }
-        
-        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
-        let image = CIImage(cvPixelBuffer: pixelBuffer)
         self.predictor?.predictOnImage(
-            image: image,
+            image: ciImage,
             completion: { recognitions in
-                result(recognitions)
+                
+                let dataToFlutterApp = [
+                    "detectedObjects": recognitions,
+                    "base64Encoded": base64String,
+                    "width": width,
+                    "height": height,
+                ] as [String: Any]
+                
+                if let jsonData = try? JSONSerialization.data(withJSONObject: dataToFlutterApp, options: []),
+                    let jsonString = String(data: jsonData, encoding: .utf8) {
+                    result(jsonString)
+                 }
+//                result(recognitions)
             })
-
-        
-        
-        
-        // 기존에 캡쳐를 하는 방식
-//        videoCapture.capture { [weak self] image in // image는 CIImage 입니다
-//            guard let self = self else {
-//                result(FlutterError(code: "CAPTURE_ERROR", message: "Self is nil", details: nil))
-//                return
-//            }
-//            
-//            if let image = image {
-//                self.predictor?.predictOnImage(
-//                    image: image,
-//                    completion: { recognitions in
-//                        result(recognitions)
-//                    })
-//            } else {
-//                result(
-//                    FlutterError(code: "CAPTURE_ERROR", message: "Failed to capture photo", details: nil))
-//            }
-//        }
     }
     
     private func takeSnapshot(args: [String: Any], result: @escaping FlutterResult) {
@@ -254,6 +237,41 @@ class MethodCallHandler: VideoCaptureDelegate, InferenceTimeListener, ResultsLis
             result(jsonString)
          }
     }
+    
+    /// 현재 화면에 보이는 비디오(카메라 화면)를 여러 종류의 이미지 데이터로 변환하여 응답하는 함수입니다
+    private func getPixelBufferAndCIImage() -> (CVPixelBuffer, CIImage, UIImage, String, Int, Int)? {
+        guard let sampleBuffer = videoCapture.sampleBuffer else {
+            return nil
+        }
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+            return nil
+        }
+        
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        
+        let context = CIContext()
+        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
+            return nil
+        }
+        
+        let uiImage = UIImage(cgImage: cgImage)
+        
+        guard let imageData = uiImage.jpegData(compressionQuality: 0.5) else {
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
+            return nil
+        }
+        
+        let base64String = imageData.base64EncodedString()
+        return (pixelBuffer, ciImage, uiImage, base64String, width, height)
+    }
+    
+    
+    
     func on(predictions: [[String: Any]]) {
         resultStreamHandler.sink(objects: predictions)
     }

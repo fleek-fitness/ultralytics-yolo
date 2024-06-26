@@ -367,58 +367,117 @@ public class MethodCallHandler implements MethodChannel.MethodCallHandler {
     }
 
     private void captureOutput(MethodCall call, MethodChannel.Result result) {
-        cameraPreview.takePhoto(new ImageCapture.OnImageSavedCallback() {
-            @Override
-            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
-                String imagePath = cameraPreview.getCapturedImagePath();
-                if (imagePath != null) {
-                    Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
-                    final float[][] res = (float[][]) predictor.predict(bitmap);
+        PreviewView previewView = this.cameraPreview.getPreviewView();
 
-                    List<Map<String, Object>> objects = new ArrayList<>();
-                    for (float[] obj : res) {
-                        Map<String, Object> objectMap = new HashMap<>();
-                        
-                        float imageWidth = bitmap.getWidth();
-                        float imageHeight = bitmap.getHeight();
-                        float x = obj[0] * imageWidth;
-                        float y = obj[1] * imageHeight;
-                        float width = obj[2] * imageWidth;
-                        float height = obj[3] * imageHeight;
-                        float confidence = obj[4];
-                        int index = (int) obj[5];
-                        String label = index < predictor.labels.size() ? predictor.labels.get(index) : "";
+        Bitmap bitmap =  previewView.getBitmap();
+        String base64String = bitmapToBase64String(bitmap);
+        final float[][] res = (float[][]) predictor.predict(bitmap);
 
-                        objectMap.put("x", x);
-                        objectMap.put("y", y);
-                        objectMap.put("width", width);
-                        objectMap.put("height", height);
-                        objectMap.put("confidence", confidence);
-                        objectMap.put("index", index);
-                        objectMap.put("label", label);
+        List<Map<String, Object>> detectObjects = new ArrayList<>();
+        for (float[] obj : res) {
+            Map<String, Object> detectObjectMap = new HashMap<>();
 
-                        // Crop the image based on the bounding box
-                        Bitmap croppedBitmap = Bitmap.createBitmap(bitmap, (int) x, (int) y, (int) width, (int) height);
+            float imageWidth = bitmap.getWidth();
+            float imageHeight = bitmap.getHeight();
+            float x = obj[0] * imageWidth;
+            float y = obj[1] * imageHeight;
+            float width = obj[2] * imageWidth;
+            float height = obj[3] * imageHeight;
+            float confidence = obj[4];
+            int index = (int) obj[5];
+            String label = index < predictor.labels.size() ? predictor.labels.get(index) : "";
 
-                        // Save the cropped image
-                        String croppedImagePath = saveCroppedImage(croppedBitmap);
-                        objectMap.put("croppedImagePath", croppedImagePath);
-                        objectMap.put("originalImagePath", imagePath);
+            // Crop the image based on the bounding box
+            Bitmap croppedBitmap = Bitmap.createBitmap(bitmap, (int) x, (int) y, (int) width, (int) height);
+            String croppedBitmapBase64String = bitmapToBase64String(croppedBitmap);
 
-                        objects.add(objectMap);
-                    }
-                    System.out.println(objects);
-                    result.success(objects);
-                } else {
-                    result.error("CaptureError", "Failed to capture image", null);
-                }
-            }
+            detectObjectMap.put("x", x);
+            detectObjectMap.put("y", y);
+            detectObjectMap.put("width", width);
+            detectObjectMap.put("height", height);
+            detectObjectMap.put("confidence", confidence);
+            detectObjectMap.put("index", index);
+            detectObjectMap.put("label", label);
+            detectObjectMap.put("base64Encoded", croppedBitmapBase64String);
 
-            @Override
-            public void onError(@NonNull ImageCaptureException exception) {
-                result.error("CaptureError", "Failed to capture image", exception);
-            }
-        });
+
+            // Save the cropped image
+//            String croppedImagePath = saveCroppedImage(croppedBitmap);
+//            detectObjectMap.put("croppedImagePath", croppedImagePath);
+//            detectObjectMap.put("originalImagePath", imagePath);
+
+            detectObjects.add(detectObjectMap);
+        }
+
+        Map<String, Object> objects = new HashMap<>();
+        objects.put("width", bitmap.getWidth());
+        objects.put("height", bitmap.getHeight());
+        objects.put("base64Encoded", base64String);
+        objects.put("detectedObjects", detectObjects);
+
+        try {
+            // Map 객체를 JSONObject로 변환
+            JSONObject jsonObject = new JSONObject(objects);
+            String jsonString = jsonObject.toString();
+
+            result.success(jsonString);
+        } catch (Exception e) {
+            result.error("JSONError", "Failed to convert map to JSON string", e);
+        }
+
+//        cameraPreview.takePhoto(new ImageCapture.OnImageSavedCallback() {
+//            @Override
+//            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+//                String imagePath = cameraPreview.getCapturedImagePath();
+//
+//                if (imagePath != null) {
+//                    Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+//                    final float[][] res = (float[][]) predictor.predict(bitmap);
+//
+//                    List<Map<String, Object>> objects = new ArrayList<>();
+//                    for (float[] obj : res) {
+//                        Map<String, Object> objectMap = new HashMap<>();
+//
+//                        float imageWidth = bitmap.getWidth();
+//                        float imageHeight = bitmap.getHeight();
+//                        float x = obj[0] * imageWidth;
+//                        float y = obj[1] * imageHeight;
+//                        float width = obj[2] * imageWidth;
+//                        float height = obj[3] * imageHeight;
+//                        float confidence = obj[4];
+//                        int index = (int) obj[5];
+//                        String label = index < predictor.labels.size() ? predictor.labels.get(index) : "";
+//
+//                        objectMap.put("x", x);
+//                        objectMap.put("y", y);
+//                        objectMap.put("width", width);
+//                        objectMap.put("height", height);
+//                        objectMap.put("confidence", confidence);
+//                        objectMap.put("index", index);
+//                        objectMap.put("label", label);
+//
+//                        // Crop the image based on the bounding box
+//                        Bitmap croppedBitmap = Bitmap.createBitmap(bitmap, (int) x, (int) y, (int) width, (int) height);
+//
+//                        // Save the cropped image
+//                        String croppedImagePath = saveCroppedImage(croppedBitmap);
+//                        objectMap.put("croppedImagePath", croppedImagePath);
+//                        objectMap.put("originalImagePath", imagePath);
+//
+//                        objects.add(objectMap);
+//                    }
+//                    System.out.println(objects);
+//                    result.success(objects);
+//                } else {
+//                    result.error("CaptureError", "Failed to capture image", null);
+//                }
+//            }
+//
+//            @Override
+//            public void onError(@NonNull ImageCaptureException exception) {
+//                result.error("CaptureError", "Failed to capture image", exception);
+//            }
+//        });
     }
 
 //
